@@ -32,16 +32,20 @@ export type QueryClientProviderProps = {
 export const QueryClientProvider = (
   props: QueryClientProviderProps,
 ): JSX.Element => {
-  createRenderEffect<() => void>((unmount) => {
-    unmount?.()
-    props.client.mount()
-    return props.client.unmount.bind(props.client)
-  })
+  // Solid v2: createRenderEffect uses compute→apply pattern
+  createRenderEffect(
+    () => props.client,
+    (client) => {
+      client.mount()
+      return () => client.unmount()
+    },
+  )
   onCleanup(() => props.client.unmount())
 
+  // Solid v2: Context itself is the Provider component (no .Provider)
   return (
-    <QueryClientContext.Provider value={() => props.client}>
+    <QueryClientContext value={() => props.client}>
       {props.children}
-    </QueryClientContext.Provider>
+    </QueryClientContext>
   )
 }

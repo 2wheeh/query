@@ -37,11 +37,15 @@ export interface UseBaseQueryOptions<
    */
   deferStream?: boolean
   /**
-   * @deprecated The `suspense` option has been deprecated in v5 and will be removed in the next major version.
-   * The `data` property on useQuery is a SolidJS resource and will automatically suspend when the data is loading.
-   * Setting `suspense` to `false` will be a no-op.
+   * Solid v2 SSR source strategy. Controls how the query behaves across
+   * server and client rendering.
+   *
+   * - `"server"` (default): Use serialized async value from server render
+   * - `"hybrid"`: First value on server, stream updates to client
+   * - `"initial"`: Run on server only, skip on client
+   * - `"client"`: Skip server entirely, run only on client
    */
-  suspense?: boolean
+  ssrSource?: 'server' | 'hybrid' | 'initial' | 'client'
 }
 
 export interface SolidQueryOptions<
@@ -112,11 +116,15 @@ export interface SolidInfiniteQueryOptions<
    */
   deferStream?: boolean
   /**
-   * @deprecated The `suspense` option has been deprecated in v5 and will be removed in the next major version.
-   * The `data` property on useInfiniteQuery is a SolidJS resource and will automatically suspend when the data is loading.
-   * Setting `suspense` to `false` will be a no-op.
+   * Solid v2 SSR source strategy. Controls how the query behaves across
+   * server and client rendering.
+   *
+   * - `"server"` (default): Use serialized async value from server render
+   * - `"hybrid"`: First value on server, stream updates to client
+   * - `"initial"`: Run on server only, skip on client
+   * - `"client"`: Skip server entirely, run only on client
    */
-  suspense?: boolean
+  ssrSource?: 'server' | 'hybrid' | 'initial' | 'client'
 }
 
 export type UseInfiniteQueryOptions<

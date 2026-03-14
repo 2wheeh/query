@@ -1,15 +1,28 @@
+/**
+ * Solid v2 PoC — useQueries
+ *
+ * Same architectural changes as useBaseQuery:
+ * - Removed createResource + dataResources + Proxy hack for suspension
+ * - Removed taskQueue batching workaround
+ * - Simplified subscription to direct store updates
+ *
+ * The v1 approach created a createResource per query result to trigger
+ * Suspense on each query's data. In v2, suspension is handled at the
+ * consumer level via <Loading> boundaries reading from async-aware memos.
+ *
+ * NOTE: useQueries in v1 already did NOT support Suspense well
+ * (the data property was "a plain object and not a SolidJS Resource").
+ * In v2, this could be revisited with native async support.
+ */
 import { QueriesObserver, noop } from '@tanstack/query-core'
-import { createStore, unwrap } from 'solid-js/store'
+// Solid v2: store exports moved to 'solid-js', mergeProps → merge
 import {
-  batch,
-  createComputed,
+  createEffect,
   createMemo,
-  createRenderEffect,
-  createResource,
-  mergeProps,
-  on,
+  createStore,
+  merge,
   onCleanup,
-  onMount,
+  snapshot,
 } from 'solid-js'
 import { useQueryClient } from './QueryClientProvider'
 import { useIsRestoring } from './isRestoring'
@@ -24,7 +37,6 @@ import type {
   QueryFunction,
   QueryKey,
   QueryObserverOptions,
-  QueryObserverResult,
   ThrowOnError,
 } from '@tanstack/query-core'
 
@@ -37,16 +49,9 @@ type UseQueryOptionsForUseQueries<
   TQueryKey extends QueryKey = QueryKey,
 > = OmitKeyof<
   SolidQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
-  'placeholderData' | 'suspense'
+  'placeholderData'
 > & {
   placeholderData?: TQueryFnData | QueriesPlaceholderDataFunction<TQueryFnData>
-  /**
-   * @deprecated The `suspense` option has been deprecated in v5 and will be removed in the next major version.
-   * The `data` property on useQueries is a plain object and not a SolidJS Resource.
-   * It will not suspend when the data is loading.
-   * Setting `suspense` to `true` will be a no-op.
-   */
-  suspense?: boolean
 }
 
 // Avoid TS depth-limit error in case of large array literal
@@ -201,7 +206,7 @@ export function useQueries<
 
   const defaultedQueries = createMemo(() =>
     queriesOptions().queries.map((options) =>
-      mergeProps(
+      merge(
         client().defaultQueryOptions(options as QueryObserverOptions),
         {
           get _optimisticResults() {
@@ -222,122 +227,68 @@ export function useQueries<
       : undefined,
   )
 
-  const [state, setState] = createStore<TCombinedResult>(
-    observer.getOptimisticResult(
-      defaultedQueries(),
-      (queriesOptions() as QueriesObserverOptions<TCombinedResult>).combine,
-    )[1](),
+  const initialResult = observer.getOptimisticResult(
+    defaultedQueries(),
+    (queriesOptions() as QueriesObserverOptions<TCombinedResult>).combine,
+  )[1]()
+
+  const [state, setState] = createStore<TCombinedResult>(initialResult as any)
+
+  // Solid v2: createEffect(compute, apply) replaces createComputed(on(...))
+  let prevLength = queriesOptions().queries.length
+  createEffect(
+    () => queriesOptions().queries.length,
+    (length) => {
+      if (length !== prevLength) {
+        prevLength = length
+        const nextResult = observer.getOptimisticResult(
+          defaultedQueries(),
+          (queriesOptions() as QueriesObserverOptions<TCombinedResult>)
+            .combine,
+        )[1]()
+        setState(() => nextResult)
+      }
+    },
   )
 
-  createRenderEffect(
-    on(
-      () => queriesOptions().queries.length,
-      () =>
-        setState(
-          observer.getOptimisticResult(
-            defaultedQueries(),
-            (queriesOptions() as QueriesObserverOptions<TCombinedResult>)
-              .combine,
-          )[1](),
-        ),
-    ),
-  )
-
-  const dataResources = createMemo(
-    on(
-      () => state.length,
-      () =>
-        state.map((queryRes) => {
-          const dataPromise = () =>
-            new Promise((resolve) => {
-              if (queryRes.isFetching && queryRes.isLoading) return
-              resolve(unwrap(queryRes.data))
-            })
-          return createResource(dataPromise)
-        }),
-    ),
-  )
-
-  batch(() => {
-    const dataResources_ = dataResources()
-    for (let index = 0; index < dataResources_.length; index++) {
-      const dataResource = dataResources_[index]!
-      dataResource[1].mutate(() => unwrap(state[index]!.data))
-      dataResource[1].refetch()
-    }
-  })
-
-  let taskQueue: Array<() => void> = []
-  const subscribeToObserver = () =>
-    observer.subscribe((result) => {
-      taskQueue.push(() => {
-        batch(() => {
-          const dataResources_ = dataResources()
-          for (let index = 0; index < dataResources_.length; index++) {
-            const dataResource = dataResources_[index]!
-            const unwrappedResult = { ...unwrap(result[index]) }
+  // v2: Direct store update from observer subscription.
+  // v1 had createResource per query + taskQueue + Proxy — all removed.
+  let unsubscribe: () => void = noop
+  createEffect(
+    () => isRestoring(),
+    (restoring) => {
+      unsubscribe()
+      if (restoring) {
+        unsubscribe = noop
+      } else {
+        unsubscribe = observer.subscribe((result) => {
+          for (let index = 0; index < result.length; index++) {
             // @ts-expect-error typescript pedantry regarding the possible range of index
-            setState(index, unwrap(unwrappedResult))
-            dataResource[1].mutate(() => unwrap(state[index]!.data))
-            dataResource[1].refetch()
+            setState(index, () => snapshot(result[index]))
           }
         })
-      })
-
-      queueMicrotask(() => {
-        const taskToRun = taskQueue.pop()
-        if (taskToRun) taskToRun()
-        taskQueue = []
-      })
-    })
-
-  let unsubscribe: () => void = noop
-  createComputed<() => void>((cleanup) => {
-    cleanup?.()
-    unsubscribe = isRestoring() ? noop : subscribeToObserver()
-    // cleanup needs to be scheduled after synchronous effects take place
-    return () => queueMicrotask(unsubscribe)
-  })
-  onCleanup(unsubscribe)
-
-  onMount(() => {
-    observer.setQueries(
-      defaultedQueries(),
-      queriesOptions().combine
-        ? ({
-            combine: queriesOptions().combine,
-          } as QueriesObserverOptions<TCombinedResult>)
-        : undefined,
-    )
-  })
-
-  createComputed(() => {
-    observer.setQueries(
-      defaultedQueries(),
-      queriesOptions().combine
-        ? ({
-            combine: queriesOptions().combine,
-          } as QueriesObserverOptions<TCombinedResult>)
-        : undefined,
-    )
-  })
-
-  const handler = (index: number) => ({
-    get(target: QueryObserverResult, prop: keyof QueryObserverResult): any {
-      if (prop === 'data') {
-        return dataResources()[index]![0]()
       }
-      return Reflect.get(target, prop)
     },
-  })
+  )
+  onCleanup(() => unsubscribe())
 
-  const getProxies = () =>
-    state.map((s, index) => {
-      return new Proxy(s, handler(index))
-    })
+  createEffect(
+    () => defaultedQueries(),
+    (dq) => {
+      observer.setQueries(
+        dq,
+        queriesOptions().combine
+          ? ({
+              combine: queriesOptions().combine,
+            } as QueriesObserverOptions<TCombinedResult>)
+          : undefined,
+      )
+    },
+  )
 
-  const [proxyState, setProxyState] = createStore(getProxies())
-  createRenderEffect(() => setProxyState(getProxies()))
-
-  return proxyState as TCombinedResult
+  // v2: No Proxy needed. Data is directly in the store.
+  // useQueries never fully supported Suspense in v1 either.
+  // In v2, consumers can wrap individual query data reads in <Loading>
+  // boundaries if needed.
+  return state
 }

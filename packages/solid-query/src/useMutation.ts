@@ -1,6 +1,7 @@
 import { MutationObserver, noop, shouldThrowError } from '@tanstack/query-core'
-import { createComputed, createMemo, on, onCleanup } from 'solid-js'
-import { createStore } from 'solid-js/store'
+// Solid v2: createStore moved from 'solid-js/store' → 'solid-js'
+// Solid v2: createComputed/on removed → use createEffect(compute, apply)
+import { createEffect, createMemo, createStore, onCleanup } from 'solid-js'
 import { useQueryClient } from './QueryClientProvider'
 import type { DefaultError } from '@tanstack/query-core'
 import type { QueryClient } from './QueryClient'
@@ -47,30 +48,38 @@ export function useMutation<
     mutateAsync: observer.getCurrentResult().mutate,
   })
 
-  createComputed(() => {
-    observer.setOptions(options())
-  })
+  // Solid v2: createEffect(compute, apply) replaces createComputed
+  createEffect(
+    () => options(),
+    (opts) => {
+      observer.setOptions(opts)
+    },
+  )
 
-  createComputed(
-    on(
-      () => state.status,
-      () => {
+  // Solid v2: createEffect(compute, apply) replaces createComputed(on(...))
+  let prevStatus = state.status
+  createEffect(
+    () => state.status,
+    (status) => {
+      if (status !== prevStatus) {
+        prevStatus = status
         if (
           state.isError &&
           shouldThrowError(observer.options.throwOnError, [state.error])
         ) {
           throw state.error
         }
-      },
-    ),
+      }
+    },
   )
 
+  // Solid v2: setState takes updater function
   const unsubscribe = observer.subscribe((result) => {
-    setState({
+    setState(() => ({
       ...result,
       mutate,
       mutateAsync: result.mutate,
-    })
+    }))
   })
 
   onCleanup(unsubscribe)

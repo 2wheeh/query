@@ -1,29 +1,64 @@
-// Had to disable the lint rule because isServer type is defined as false
-// in solid-js/web package. I'll create a GitHub issue with them to see
-// why that happens.
+/**
+ * Solid v2 PoC — useBaseQuery
+ *
+ * Key architectural changes from v1 adapter:
+ *
+ * REMOVED:
+ * - createResource + Promise wrapping (Solid v2 createMemo handles async natively)
+ * - createDeepSignal hack (was needed to bridge createResource ↔ createStore)
+ * - createServerSubscriber / createClientSubscriber split
+ * - resolver + unsubscribeQueued race condition handling
+ * - hydratableObserverResult + onHydrated SSR workaround
+ * - createComputed / on() (removed in Solid v2)
+ *
+ * ADDED:
+ * - Suspension via createMemo returning observer's pending thenable
+ *   (query-core's pendingThenable() is a real Promise → passes Solid v2's
+ *    `instanceof Promise` check → triggers NotReadyError → <Loading> catches)
+ *
+ * KEPT:
+ * - query-core's state machine (QueryObserver) — unchanged
+ * - createStore for reactive result propagation
+ * - reconcileFn for structural sharing
+ * - Proxy for data access (simplified: routes to suspension-aware memo)
+ *
+ * Solid v2 API changes applied:
+ * - solid-js/store → solid-js (stores merged into main package)
+ * - solid-js/web → @solidjs/web
+ * - unwrap() → snapshot()
+ * - createComputed(on(...)) → createEffect(compute, apply)
+ * - on() helper removed — use createEffect 2-arg form
+ *
+ * TODO (requires runtime validation with SolidStart v2):
+ * - Verify ssrSource/deferStream + sharedConfig.hydrating cache sync
+ * - isPending() / latest() integration for stale-while-revalidate UX
+ * - Solid v2 action() bridge for useMutation optimistic updates
+ */
 import { hydrate, notifyManager, shouldThrowError } from '@tanstack/query-core'
-import { isServer } from 'solid-js/web'
+import { isServer } from '@solidjs/web'
 import {
-  createComputed,
+  createEffect,
   createMemo,
-  createResource,
   createSignal,
-  on,
+  createStore,
   onCleanup,
+  reconcile,
+  sharedConfig,
 } from 'solid-js'
-import { createStore, reconcile, unwrap } from 'solid-js/store'
 import { useQueryClient } from './QueryClientProvider'
 import { useIsRestoring } from './isRestoring'
 import type { UseBaseQueryOptions } from './types'
-import type { Accessor, Signal } from 'solid-js'
+import type { Accessor } from 'solid-js'
 import type { QueryClient } from './QueryClient'
 import type {
-  Query,
   QueryKey,
   QueryObserver,
   QueryObserverResult,
 } from '@tanstack/query-core'
 
+// ------------------------------------------------------------
+// reconcileFn — kept from v1 (structural sharing for store updates)
+// ------------------------------------------------------------
 function reconcileFn<TData, TError>(
   store: QueryObserverResult<TData, TError>,
   result: QueryObserverResult<TData, TError>,
@@ -55,51 +90,24 @@ function reconcileFn<TData, TError>(
       }
     }
   }
-  const newData = reconcile(data, { key: reconcileOption })(store.data)
+  const newData = reconcile(data, reconcileOption)(store.data)
   return { ...result, data: newData } as typeof result
 }
 
-/**
- * Solid's `onHydrated` functionality will silently "fail" (hydrate with an empty object)
- * if the resource data is not serializable.
- */
-const hydratableObserverResult = <
-  TQueryFnData,
-  TError,
-  TData,
-  TQueryKey extends QueryKey,
-  TDataHydratable,
->(
-  query: Query<TQueryFnData, TError, TData, TQueryKey>,
-  result: QueryObserverResult<TDataHydratable, TError>,
-) => {
-  if (!isServer) return result
-  const obj: any = {
-    ...unwrap(result),
-    // During SSR, functions cannot be serialized, so we need to remove them
-    // This is safe because we will add these functions back when the query is hydrated
-    refetch: undefined,
-  }
-
-  // If the query is an infinite query, we need to remove additional properties
-  if ('fetchNextPage' in result) {
-    obj.fetchNextPage = undefined
-    obj.fetchPreviousPage = undefined
-  }
-
-  // We will also attach the dehydrated state of the query to the result
-  // This will be removed on client after hydration
-  obj.hydrationData = {
-    state: query.state,
-    queryKey: query.queryKey,
-    queryHash: query.queryHash,
-    ...(query.meta && { meta: query.meta }),
-  }
-
-  return obj
-}
-
-// Base Query Function that is used to create the query.
+// ------------------------------------------------------------
+// useBaseQuery — Solid v2 PoC
+//
+// SSR: Solid v2's first-class async handles serialization across
+// server→client boundary internally. We pass ssrSource/deferStream
+// to createMemo and Solid v2 runtime handles:
+//   - Server: run computation → serialize result via ctx.serialize()
+//   - Client: restore value via sharedConfig.load() → subFetch for refetch
+// No external <HydrationBoundary> wrapper needed (unlike React/Svelte).
+//
+// query-core cache sync: on hydration, we detect the restored data and
+// call hydrate() to sync cache metadata (dataUpdatedAt, staleTime, etc.)
+// that Solid v2 doesn't know about.
+// ------------------------------------------------------------
 export function useBaseQuery<
   TQueryFnData,
   TError,
@@ -113,15 +121,8 @@ export function useBaseQuery<
   Observer: typeof QueryObserver,
   queryClient?: Accessor<QueryClient>,
 ) {
-  type ResourceData = QueryObserverResult<TData, TError>
-
   const client = createMemo(() => useQueryClient(queryClient?.()))
   const isRestoring = useIsRestoring()
-  // There are times when we run a query on the server but the resource is never read
-  // This could lead to times when the queryObserver is unsubscribed before the resource has loaded
-  // Causing a time out error. To prevent this we will queue the unsubscribe if the cleanup is called
-  // before the resource has loaded
-  let unsubscribeQueued = false
 
   const defaultedOptions = createMemo(() => {
     const defaultOptions = client().defaultQueryOptions(options())
@@ -129,16 +130,18 @@ export function useBaseQuery<
       ? 'isRestoring'
       : 'optimistic'
     defaultOptions.structuralSharing = false
+    // Enable thenable tracking on observer results — query-core will
+    // resolve/reject #currentThenable so we can hand it to Solid v2
+    // for suspension without wrapping in createResource.
+    defaultOptions.experimental_prefetchInRender = true
     if (isServer) {
       defaultOptions.retry = false
       defaultOptions.throwOnError = true
-      // Enable prefetch during render for SSR - required for createResource to work
-      // Without this, queries wait for effects which never run on the server
-      defaultOptions.experimental_prefetchInRender = true
     }
     return defaultOptions
   })
-  const initialOptions = defaultedOptions()
+
+  // -- Observer lifecycle -----------------------------------------------
 
   const [observer, setObserver] = createSignal(
     new Observer(client(), defaultedOptions()),
@@ -147,47 +150,6 @@ export function useBaseQuery<
   let observerResult = observer().getOptimisticResult(defaultedOptions())
   const [state, setState] =
     createStore<QueryObserverResult<TData, TError>>(observerResult)
-
-  const createServerSubscriber = (
-    resolve: (
-      data: ResourceData | PromiseLike<ResourceData | undefined> | undefined,
-    ) => void,
-    reject: (reason?: any) => void,
-  ) => {
-    return observer().subscribe((result) => {
-      notifyManager.batchCalls(() => {
-        const query = observer().getCurrentQuery()
-        const unwrappedResult = hydratableObserverResult(query, result)
-
-        if (result.data !== undefined && unwrappedResult.isError) {
-          reject(unwrappedResult.error)
-          unsubscribeIfQueued()
-        } else {
-          resolve(unwrappedResult)
-          unsubscribeIfQueued()
-        }
-      })()
-    })
-  }
-
-  const unsubscribeIfQueued = () => {
-    if (unsubscribeQueued) {
-      unsubscribe?.()
-      unsubscribeQueued = false
-    }
-  }
-
-  const createClientSubscriber = () => {
-    const obs = observer()
-    return obs.subscribe((result) => {
-      observerResult = result
-      queueMicrotask(() => {
-        if (unsubscribe) {
-          refetch()
-        }
-      })
-    })
-  }
 
   function setStateWithReconciliation(res: typeof observerResult) {
     const opts = observer().options
@@ -204,171 +166,172 @@ export function useBaseQuery<
     })
   }
 
-  function createDeepSignal<T>(): Signal<T> {
-    return [
-      () => state,
-      (v: any) => {
-        const unwrapped = unwrap(state)
-        if (typeof v === 'function') {
-          v = v(unwrapped)
-        }
-        // Hydration data exists on first load after SSR,
-        // and should be removed from the observer result
-        if (v?.hydrationData) {
-          const { hydrationData, ...rest } = v
-          v = rest
-        }
-        setStateWithReconciliation(v)
-      },
-    ] as Signal<T>
+  // -- SSR cache sync ---------------------------------------------------
+  // Solid v2 restores the memo value automatically during hydration.
+  // But query-core's cache needs metadata (dataUpdatedAt, status, etc.)
+  // that only exists in the observer/query state.
+  // We detect hydration and sync the cache so staleTime/gcTime work correctly.
+
+  if (
+    !isServer &&
+    sharedConfig.hydrating &&
+    observerResult.data !== undefined
+  ) {
+    const query = observer().getCurrentQuery()
+    hydrate(client(), {
+      queries: [
+        {
+          queryKey: query.queryKey,
+          queryHash: query.queryHash,
+          state: query.state,
+          ...(query.meta && { meta: query.meta }),
+        },
+      ],
+    })
   }
 
-  /**
-   * Unsubscribe is set lazily, so that we can subscribe after hydration when needed.
-   */
+  // -- Subscription ----------------------------------------------------
+  // v1 had separate createServerSubscriber / createClientSubscriber with
+  // resolver + unsubscribeQueued for race conditions around createResource.
+  // v2: single subscriber, no Promise wrapper needed.
+
   let unsubscribe: (() => void) | null = null
 
-  /*
-    Fixes #7275
-    In a few cases, the observer could unmount before the resource is loaded.
-    This leads to Suspense boundaries to be suspended indefinitely.
-    This resolver will be called when the observer is unmounting
-    but the resource is still in a loading state
-  */
-  let resolver: ((value: ResourceData) => void) | null = null
-  const [queryResource, { refetch }] = createResource<ResourceData | undefined>(
-    () => {
-      const obs = observer()
-      return new Promise((resolve, reject) => {
-        resolver = resolve
-        if (isServer) {
-          unsubscribe = createServerSubscriber(resolve, reject)
-        } else if (!unsubscribe && !isRestoring()) {
-          unsubscribe = createClientSubscriber()
-        }
-        obs.updateResult()
+  function subscribe() {
+    unsubscribe?.()
+    const obs = observer()
+    unsubscribe = obs.subscribe((result) => {
+      notifyManager.batchCalls(() => {
+        observerResult = result
+        setStateWithReconciliation(result)
+      })()
+    })
+  }
 
-        if (
-          observerResult.isError &&
-          !observerResult.isFetching &&
-          !isRestoring() &&
-          shouldThrowError(obs.options.throwOnError, [
-            observerResult.error,
-            obs.getCurrentQuery(),
-          ])
-        ) {
-          setStateWithReconciliation(observerResult)
-          return reject(observerResult.error)
-        }
-        if (!observerResult.isLoading) {
-          resolver = null
-          return resolve(
-            hydratableObserverResult(obs.getCurrentQuery(), observerResult),
-          )
-        }
-
-        setStateWithReconciliation(observerResult)
-      })
-    },
-    {
-      storage: createDeepSignal,
-
-      get deferStream() {
-        return options().deferStream
-      },
-
-      /**
-       * If this resource was populated on the server (either sync render, or streamed in over time), onHydrated
-       * will be called. This is the point at which we can hydrate the query cache state, and setup the query subscriber.
-       *
-       * Leveraging onHydrated allows us to plug into the async and streaming support that solidjs resources already support.
-       *
-       * Note that this is only invoked on the client, for queries that were originally run on the server.
-       */
-      onHydrated(_k, info) {
-        if (info.value && 'hydrationData' in info.value) {
-          hydrate(client(), {
-            // @ts-expect-error - hydrationData is not correctly typed internally
-            queries: [{ ...info.value.hydrationData }],
-          })
-        }
-
-        if (unsubscribe) return
-        /**
-         * Do not refetch query on mount if query was fetched on server,
-         * even if `staleTime` is not set.
-         */
-        const newOptions = { ...initialOptions }
-        if (
-          (initialOptions.staleTime || !initialOptions.initialData) &&
-          info.value
-        ) {
-          newOptions.refetchOnMount = false
-        }
-        // Setting the options as an immutable object to prevent
-        // wonky behavior with observer subscriptions
-        observer().setOptions(newOptions)
-        setStateWithReconciliation(observer().getOptimisticResult(newOptions))
-        unsubscribe = createClientSubscriber()
-      },
-    },
-  )
-
-  createComputed(
-    on(
-      client,
-      (c) => {
-        if (unsubscribe) {
-          unsubscribe()
-        }
-        const newObserver = new Observer(c, defaultedOptions())
-        unsubscribe = createClientSubscriber()
-        setObserver(newObserver)
-      },
-      {
-        defer: true,
-      },
-    ),
-  )
-
-  createComputed(
-    on(
-      isRestoring,
-      (restoring) => {
-        if (!restoring && !isServer) {
-          refetch()
-        }
-      },
-      { defer: true },
-    ),
-  )
+  if (!isRestoring()) {
+    subscribe()
+  }
 
   onCleanup(() => {
-    if (isServer && queryResource.loading) {
-      unsubscribeQueued = true
-      return
-    }
-    if (unsubscribe) {
-      unsubscribe()
-      unsubscribe = null
-    }
-    if (resolver && !isServer) {
-      resolver(observerResult)
-      resolver = null
-    }
+    unsubscribe?.()
+    unsubscribe = null
   })
 
-  createComputed(
-    on(
-      [observer, defaultedOptions],
-      ([obs, opts]) => {
-        obs.setOptions(opts)
-        setStateWithReconciliation(obs.getOptimisticResult(opts))
-        refetch()
-      },
-      { defer: true },
-    ),
+  // -- Reactive option / client tracking --------------------------------
+  // Solid v2: createComputed + on() removed. Using createEffect(compute, apply).
+
+  // When QueryClient instance changes → new observer
+  let prevClient = client()
+  createEffect(
+    () => client(),
+    (c) => {
+      if (c !== prevClient) {
+        prevClient = c
+        const newObserver = new Observer(c, defaultedOptions())
+        setObserver(newObserver)
+        subscribe()
+      }
+    },
   )
+
+  // When options change → update observer + result
+  let prevOpts = defaultedOptions()
+  createEffect(
+    () => [observer(), defaultedOptions()] as const,
+    ([obs, opts]) => {
+      if (opts !== prevOpts) {
+        prevOpts = opts
+        obs.setOptions(opts)
+        observerResult = obs.getOptimisticResult(opts)
+        setStateWithReconciliation(observerResult)
+      }
+    },
+  )
+
+  // When restoring finishes → subscribe + sync result
+  let prevRestoring = isRestoring()
+  createEffect(
+    () => isRestoring(),
+    (restoring) => {
+      if (prevRestoring && !restoring && !isServer) {
+        prevRestoring = restoring
+        subscribe()
+        observerResult = observer().getOptimisticResult(defaultedOptions())
+        setStateWithReconciliation(observerResult)
+      }
+      prevRestoring = restoring
+    },
+  )
+
+  // -- Suspension via Solid v2 native async ----------------------------
+  //
+  // How it works:
+  //
+  //   query-core's QueryObserver maintains a `#currentThenable` (a real
+  //   Promise created via `new Promise()`). When data arrives or errors,
+  //   the thenable is resolved/rejected via `.resolve()` / `.reject()`.
+  //
+  //   Solid v2's reactive runtime checks `result instanceof Promise` in
+  //   processResult(). When a createMemo returns a pending Promise:
+  //     1. Runtime creates a NotReadyError(promise)
+  //     2. NotReadyError propagates through the reactive graph
+  //     3. <Loading> boundary catches it and shows fallback
+  //     4. When promise resolves → memo re-evaluates → <Loading> shows children
+  //
+  //   This replaces the entire createResource + createDeepSignal + Proxy hack
+  //   from v1, which existed solely because Solid v1's only suspension
+  //   mechanism was createResource.
+  //
+  // When to suspend:
+  //   - Initial load (isPending + isFetching): return pending thenable
+  //   - Background refetch (data exists + isFetching): return stale data (no suspend)
+  //   - Error with throwOnError: throw the error
+  //
+  // For "refreshing" UI during background refetches, users can use
+  // Solid v2's `isPending(() => query.data)` instead of checking `isFetching`.
+
+  // ssrSource/deferStream passed to createMemo — Solid v2 runtime handles:
+  //   Server: runs computation → serializes Promise result via ctx.serialize()
+  //   Client: restores serialized value → schedules refetch via subFetch()
+  const ssrMemoOptions = {
+    ssrSource: options().ssrSource,
+    deferStream: options().deferStream,
+  }
+
+  const data = createMemo(() => {
+    // Error boundary support
+    if (
+      state.isError &&
+      !state.isFetching &&
+      !isRestoring() &&
+      shouldThrowError(observer().options.throwOnError, [
+        state.error,
+        observer().getCurrentQuery(),
+      ])
+    ) {
+      throw state.error
+    }
+
+    // Initial load → return the observer's pending thenable to trigger <Loading>
+    if (state.isPending && state.isFetching && !isRestoring()) {
+      // observerResult.promise is query-core's PendingThenable<TData>
+      // which extends Promise<TData> (created via `new Promise()`)
+      // → passes Solid v2's `instanceof Promise` check
+      // → triggers NotReadyError → caught by <Loading> boundary
+      return observerResult.promise
+    }
+
+    // Data available (or background refetch with stale data) → return synchronously
+    return state.data
+  }, ssrMemoOptions)
+
+  // -- Return value -----------------------------------------------------
+  // Proxy routes `data` access through the suspension-aware memo.
+  // All other properties (isPending, isFetching, isError, error, etc.)
+  // read directly from the reactive store — no suspension.
+  //
+  // v1 Proxy had to route through queryResource for createResource integration.
+  // v2 Proxy just routes through createMemo — same pattern, much less machinery.
 
   const handler = {
     get(
@@ -376,10 +339,7 @@ export function useBaseQuery<
       prop: keyof QueryObserverResult<TData, TError>,
     ): any {
       if (prop === 'data') {
-        if (state.data !== undefined) {
-          return queryResource.latest?.data
-        }
-        return queryResource()?.data
+        return data()
       }
       return Reflect.get(target, prop)
     },

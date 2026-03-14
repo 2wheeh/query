@@ -1,3 +1,5 @@
+// Solid v2: createEffect split into compute → apply phases
+// Solid v2: createComputed removed
 import { createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
 import { replaceEqualDeep } from '@tanstack/query-core'
 import { useQueryClient } from './QueryClientProvider'
@@ -38,19 +40,23 @@ export function useMutationState<TResult = MutationState>(
     getResult(mutationCache(), options()),
   )
 
-  createEffect(() => {
-    const unsubscribe = mutationCache().subscribe(() => {
-      const nextResult = replaceEqualDeep(
-        result(),
-        getResult(mutationCache(), options()),
-      )
-      if (result() !== nextResult) {
-        setResult(nextResult)
-      }
-    })
+  // Solid v2: createEffect(compute, apply)
+  createEffect(
+    () => mutationCache(),
+    (cache) => {
+      const unsubscribe = cache.subscribe(() => {
+        const nextResult = replaceEqualDeep(
+          result(),
+          getResult(cache, options()),
+        )
+        if (result() !== nextResult) {
+          setResult(nextResult)
+        }
+      })
 
-    onCleanup(unsubscribe)
-  })
+      onCleanup(unsubscribe)
+    },
+  )
 
   return result
 }
