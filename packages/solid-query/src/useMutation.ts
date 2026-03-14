@@ -29,8 +29,7 @@ export function useMutation<
 ): UseMutationResult<TData, TError, TVariables, TOnMutateResult> {
   const client = createMemo(() => useQueryClient(queryClient?.()))
 
-  // Wrap observer in signal so it can be recreated when client changes
-  // (same pattern as useBaseQuery)
+  // Observer in signal — recreated when client changes
   const [observer, setObserver] = createSignal(
     new MutationObserver<TData, TError, TVariables, TOnMutateResult>(
       client(),
@@ -55,7 +54,7 @@ export function useMutation<
     mutateAsync: observer().getCurrentResult().mutate,
   })
 
-  // When client changes → recreate observer (same pattern as useBaseQuery)
+  // Client change → new observer
   createEffect(
     () => client(),
     (c, prevC) => {
@@ -70,7 +69,7 @@ export function useMutation<
     },
   )
 
-  // Solid v2: createEffect(compute, apply) replaces createComputed
+  // Options tracking
   createEffect(
     () => options(),
     (opts) => {
@@ -78,9 +77,8 @@ export function useMutation<
     },
   )
 
-  // Error boundary support via createMemo (same pattern as useBaseQuery).
-  // Throwing in createMemo naturally propagates to <Errored> boundaries,
-  // whereas throwing in createEffect has undefined behavior in Solid v2.
+  // Error boundary support via createMemo.
+  // Throwing in createMemo propagates to <Errored> boundaries.
   createMemo(() => {
     if (
       state.isError &&
@@ -90,8 +88,7 @@ export function useMutation<
     }
   })
 
-  // Subscription wrapped in createEffect for Solid v2 RFC 01 compliance
-  // (no top-level side effects).
+  // Subscription in createEffect — re-subscribes when observer changes
   createEffect(
     () => observer(),
     (obs) => {

@@ -1,4 +1,4 @@
-import { createMemo, createSignal, onCleanup } from 'solid-js'
+import { createEffect, createMemo, createSignal, onCleanup } from 'solid-js'
 import { useQueryClient } from './QueryClientProvider'
 import type { MutationFilters } from '@tanstack/query-core'
 import type { QueryClient } from './QueryClient'
@@ -15,11 +15,16 @@ export function useIsMutating(
     client().isMutating(filters?.()),
   )
 
-  const unsubscribe = mutationCache().subscribe((_result) => {
-    setMutations(client().isMutating(filters?.()))
-  })
-
-  onCleanup(unsubscribe)
+  // Re-subscribe when mutationCache changes (client change)
+  createEffect(
+    () => mutationCache(),
+    (cache) => {
+      const unsubscribe = cache.subscribe(() => {
+        setMutations(client().isMutating(filters?.()))
+      })
+      onCleanup(unsubscribe)
+    },
+  )
 
   return mutations
 }
