@@ -1,21 +1,11 @@
 /**
  * Solid v2 PoC — useQueries
  *
- * Same architectural changes as useBaseQuery:
- * - Removed createResource + dataResources + Proxy hack for suspension
- * - Removed taskQueue batching workaround
- * - Simplified subscription to direct store updates
- *
- * The v1 approach created a createResource per query result to trigger
- * Suspense on each query's data. In v2, suspension is handled at the
- * consumer level via <Loading> boundaries reading from async-aware memos.
- *
- * NOTE: useQueries in v1 already did NOT support Suspense well
- * (the data property was "a plain object and not a SolidJS Resource").
- * In v2, this could be revisited with native async support.
+ * v1 used createResource per query + taskQueue + Proxy. All removed.
+ * v2 uses direct store updates from QueriesObserver subscription.
+ * useQueries does not suspend (v1 didn't either).
  */
 import { QueriesObserver, noop } from '@tanstack/query-core'
-// Solid v2: store exports moved to 'solid-js', mergeProps → merge
 import {
   createEffect,
   createMemo,
@@ -23,7 +13,6 @@ import {
   createStore,
   merge,
   onCleanup,
-  snapshot,
 } from 'solid-js'
 import { useQueryClient } from './QueryClientProvider'
 import { useIsRestoring } from './isRestoring'
@@ -218,18 +207,15 @@ export function useQueries<
     ),
   )
 
-  // Wrap observer in a signal so it can be recreated when client changes
-  // (parallels useBaseQuery's pattern).
+  const combineOpt = () =>
+    queriesOptions().combine
+      ? ({
+          combine: queriesOptions().combine,
+        } as QueriesObserverOptions<TCombinedResult>)
+      : undefined
+
   const [observer, setObserver] = createSignal(
-    new QueriesObserver(
-      client(),
-      defaultedQueries(),
-      queriesOptions().combine
-        ? ({
-            combine: queriesOptions().combine,
-          } as QueriesObserverOptions<TCombinedResult>)
-        : undefined,
-    ),
+    new QueriesObserver(client(), defaultedQueries(), combineOpt()),
   )
 
   const initialResult = observer().getOptimisticResult(
@@ -239,38 +225,32 @@ export function useQueries<
 
   const [state, setState] = createStore<TCombinedResult>(initialResult as any)
 
-  // When client changes → recreate observer (same pattern as useBaseQuery)
+  // Client change → new observer
   createEffect(
     () => client(),
     (c, prevC) => {
       if (c !== prevC) {
-        const combineOpt = queriesOptions().combine
-          ? ({
-              combine: queriesOptions().combine,
-            } as QueriesObserverOptions<TCombinedResult>)
-          : undefined
-        setObserver(new QueriesObserver(c, defaultedQueries(), combineOpt))
+        setObserver(new QueriesObserver(c, defaultedQueries(), combineOpt()))
       }
     },
   )
 
-  // Solid v2: createEffect(compute, apply) with prev parameter
+  // Queries array size change → reinit store
   createEffect(
     () => queriesOptions().queries.length,
     (length, prevLength) => {
       if (length !== prevLength) {
         const nextResult = observer().getOptimisticResult(
           defaultedQueries(),
-          (queriesOptions() as QueriesObserverOptions<TCombinedResult>)
-            .combine,
+          (queriesOptions() as QueriesObserverOptions<TCombinedResult>).combine,
         )[1]()
+        // v2 draft-first: return value = shallow replacement
         setState(() => nextResult)
       }
     },
   )
 
-  // v2: Direct store update from observer subscription.
-  // v1 had createResource per query + taskQueue + Proxy — all removed.
+  // Subscription — re-subscribes on observer/isRestoring changes
   let unsubscribe: () => void = noop
   createEffect(
     () => [isRestoring(), observer()] as const,
@@ -280,33 +260,21 @@ export function useQueries<
         unsubscribe = noop
       } else {
         unsubscribe = obs.subscribe((result) => {
-          for (let index = 0; index < result.length; index++) {
-            // @ts-expect-error typescript pedantry regarding the possible range of index
-            setState(index, () => snapshot(result[index]))
-          }
+          // v2 draft-first: return value = shallow replacement
+          setState(() => result as unknown as TCombinedResult)
         })
       }
     },
   )
   onCleanup(() => unsubscribe())
 
+  // Options change → update observer queries
   createEffect(
     () => [defaultedQueries(), observer()] as const,
     ([dq, obs]) => {
-      obs.setQueries(
-        dq,
-        queriesOptions().combine
-          ? ({
-              combine: queriesOptions().combine,
-            } as QueriesObserverOptions<TCombinedResult>)
-          : undefined,
-      )
+      obs.setQueries(dq, combineOpt())
     },
   )
 
-  // v2: No Proxy needed. Data is directly in the store.
-  // useQueries never fully supported Suspense in v1 either.
-  // In v2, consumers can wrap individual query data reads in <Loading>
-  // boundaries if needed.
   return state
 }

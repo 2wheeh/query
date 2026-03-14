@@ -1,6 +1,4 @@
 import { MutationObserver, noop, shouldThrowError } from '@tanstack/query-core'
-// Solid v2: createStore moved from 'solid-js/store' → 'solid-js'
-// Solid v2: createComputed/on removed → use createEffect(compute, apply)
 import {
   createEffect,
   createMemo,
