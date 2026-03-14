@@ -56,22 +56,17 @@ export function useMutation<
     },
   )
 
-  // Solid v2: createEffect(compute, apply) replaces createComputed(on(...))
-  let prevStatus = state.status
-  createEffect(
-    () => state.status,
-    (status) => {
-      if (status !== prevStatus) {
-        prevStatus = status
-        if (
-          state.isError &&
-          shouldThrowError(observer.options.throwOnError, [state.error])
-        ) {
-          throw state.error
-        }
-      }
-    },
-  )
+  // Error boundary support via createMemo (same pattern as useBaseQuery).
+  // Throwing in createMemo naturally propagates to <Errored> boundaries,
+  // whereas throwing in createEffect has undefined behavior in Solid v2.
+  createMemo(() => {
+    if (
+      state.isError &&
+      shouldThrowError(observer.options.throwOnError, [state.error])
+    ) {
+      throw state.error
+    }
+  })
 
   // Solid v2: setState takes updater function
   const unsubscribe = observer.subscribe((result) => {

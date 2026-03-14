@@ -1,7 +1,6 @@
 import {
   createContext,
   createRenderEffect,
-  onCleanup,
   useContext,
 } from 'solid-js'
 import type { QueryClient } from './QueryClient'
@@ -32,7 +31,9 @@ export type QueryClientProviderProps = {
 export const QueryClientProvider = (
   props: QueryClientProviderProps,
 ): JSX.Element => {
-  // Solid v2: createRenderEffect uses compute→apply pattern
+  // Solid v2: createRenderEffect uses compute→apply pattern.
+  // Cleanup is handled via return value (Solid v2 RFC 01) —
+  // no separate onCleanup needed to avoid double unmount().
   createRenderEffect(
     () => props.client,
     (client) => {
@@ -40,7 +41,6 @@ export const QueryClientProvider = (
       return () => client.unmount()
     },
   )
-  onCleanup(() => props.client.unmount())
 
   // Solid v2: Context itself is the Provider component (no .Provider)
   return (

@@ -19,6 +19,7 @@ import { QueriesObserver, noop } from '@tanstack/query-core'
 import {
   createEffect,
   createMemo,
+  createSignal,
   createStore,
   merge,
   onCleanup,
@@ -217,31 +218,48 @@ export function useQueries<
     ),
   )
 
-  const observer = new QueriesObserver(
-    client(),
-    defaultedQueries(),
-    queriesOptions().combine
-      ? ({
-          combine: queriesOptions().combine,
-        } as QueriesObserverOptions<TCombinedResult>)
-      : undefined,
+  // Wrap observer in a signal so it can be recreated when client changes
+  // (parallels useBaseQuery's pattern).
+  const [observer, setObserver] = createSignal(
+    new QueriesObserver(
+      client(),
+      defaultedQueries(),
+      queriesOptions().combine
+        ? ({
+            combine: queriesOptions().combine,
+          } as QueriesObserverOptions<TCombinedResult>)
+        : undefined,
+    ),
   )
 
-  const initialResult = observer.getOptimisticResult(
+  const initialResult = observer().getOptimisticResult(
     defaultedQueries(),
     (queriesOptions() as QueriesObserverOptions<TCombinedResult>).combine,
   )[1]()
 
   const [state, setState] = createStore<TCombinedResult>(initialResult as any)
 
-  // Solid v2: createEffect(compute, apply) replaces createComputed(on(...))
-  let prevLength = queriesOptions().queries.length
+  // When client changes → recreate observer (same pattern as useBaseQuery)
+  createEffect(
+    () => client(),
+    (c, prevC) => {
+      if (c !== prevC) {
+        const combineOpt = queriesOptions().combine
+          ? ({
+              combine: queriesOptions().combine,
+            } as QueriesObserverOptions<TCombinedResult>)
+          : undefined
+        setObserver(new QueriesObserver(c, defaultedQueries(), combineOpt))
+      }
+    },
+  )
+
+  // Solid v2: createEffect(compute, apply) with prev parameter
   createEffect(
     () => queriesOptions().queries.length,
-    (length) => {
+    (length, prevLength) => {
       if (length !== prevLength) {
-        prevLength = length
-        const nextResult = observer.getOptimisticResult(
+        const nextResult = observer().getOptimisticResult(
           defaultedQueries(),
           (queriesOptions() as QueriesObserverOptions<TCombinedResult>)
             .combine,
@@ -255,13 +273,13 @@ export function useQueries<
   // v1 had createResource per query + taskQueue + Proxy — all removed.
   let unsubscribe: () => void = noop
   createEffect(
-    () => isRestoring(),
-    (restoring) => {
+    () => [isRestoring(), observer()] as const,
+    ([restoring, obs]) => {
       unsubscribe()
       if (restoring) {
         unsubscribe = noop
       } else {
-        unsubscribe = observer.subscribe((result) => {
+        unsubscribe = obs.subscribe((result) => {
           for (let index = 0; index < result.length; index++) {
             // @ts-expect-error typescript pedantry regarding the possible range of index
             setState(index, () => snapshot(result[index]))
@@ -273,9 +291,9 @@ export function useQueries<
   onCleanup(() => unsubscribe())
 
   createEffect(
-    () => defaultedQueries(),
-    (dq) => {
-      observer.setQueries(
+    () => [defaultedQueries(), observer()] as const,
+    ([dq, obs]) => {
+      obs.setQueries(
         dq,
         queriesOptions().combine
           ? ({

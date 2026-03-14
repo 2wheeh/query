@@ -194,6 +194,8 @@ export function useBaseQuery<
   // v1 had separate createServerSubscriber / createClientSubscriber with
   // resolver + unsubscribeQueued for race conditions around createResource.
   // v2: single subscriber, no Promise wrapper needed.
+  // Wrapped in createEffect to comply with Solid v2's strict top-level
+  // side-effect rules (RFC 01).
 
   let unsubscribe: (() => void) | null = null
 
@@ -208,9 +210,20 @@ export function useBaseQuery<
     })
   }
 
-  if (!isRestoring()) {
-    subscribe()
-  }
+  createEffect(
+    () => isRestoring(),
+    (_restoring, prevRestoring) => {
+      if (!isRestoring()) {
+        subscribe()
+
+        // When restoring just finished → sync optimistic result
+        if (prevRestoring && !isServer) {
+          observerResult = observer().getOptimisticResult(defaultedOptions())
+          setStateWithReconciliation(observerResult)
+        }
+      }
+    },
+  )
 
   onCleanup(() => {
     unsubscribe?.()
@@ -218,15 +231,14 @@ export function useBaseQuery<
   })
 
   // -- Reactive option / client tracking --------------------------------
-  // Solid v2: createComputed + on() removed. Using createEffect(compute, apply).
+  // Solid v2: createEffect(compute, (value, prev) => ...) provides prev
+  // parameter natively — no manual prev variable needed.
 
   // When QueryClient instance changes → new observer
-  let prevClient = client()
   createEffect(
     () => client(),
-    (c) => {
-      if (c !== prevClient) {
-        prevClient = c
+    (c, prevC) => {
+      if (c !== prevC) {
         const newObserver = new Observer(c, defaultedOptions())
         setObserver(newObserver)
         subscribe()
@@ -235,31 +247,14 @@ export function useBaseQuery<
   )
 
   // When options change → update observer + result
-  let prevOpts = defaultedOptions()
   createEffect(
     () => [observer(), defaultedOptions()] as const,
-    ([obs, opts]) => {
-      if (opts !== prevOpts) {
-        prevOpts = opts
+    ([obs, opts], prev) => {
+      if (opts !== prev?.[1]) {
         obs.setOptions(opts)
         observerResult = obs.getOptimisticResult(opts)
         setStateWithReconciliation(observerResult)
       }
-    },
-  )
-
-  // When restoring finishes → subscribe + sync result
-  let prevRestoring = isRestoring()
-  createEffect(
-    () => isRestoring(),
-    (restoring) => {
-      if (prevRestoring && !restoring && !isServer) {
-        prevRestoring = restoring
-        subscribe()
-        observerResult = observer().getOptimisticResult(defaultedOptions())
-        setStateWithReconciliation(observerResult)
-      }
-      prevRestoring = restoring
     },
   )
 
