@@ -1,7 +1,13 @@
 import { MutationObserver, noop, shouldThrowError } from '@tanstack/query-core'
 // Solid v2: createStore moved from 'solid-js/store' → 'solid-js'
 // Solid v2: createComputed/on removed → use createEffect(compute, apply)
-import { createEffect, createMemo, createStore, onCleanup } from 'solid-js'
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  createStore,
+  onCleanup,
+} from 'solid-js'
 import { useQueryClient } from './QueryClientProvider'
 import type { DefaultError } from '@tanstack/query-core'
 import type { QueryClient } from './QueryClient'
@@ -12,7 +18,6 @@ import type {
 } from './types'
 import type { Accessor } from 'solid-js'
 
-// HOOK
 export function useMutation<
   TData = unknown,
   TError = DefaultError,
@@ -24,12 +29,14 @@ export function useMutation<
 ): UseMutationResult<TData, TError, TVariables, TOnMutateResult> {
   const client = createMemo(() => useQueryClient(queryClient?.()))
 
-  const observer = new MutationObserver<
-    TData,
-    TError,
-    TVariables,
-    TOnMutateResult
-  >(client(), options())
+  // Wrap observer in signal so it can be recreated when client changes
+  // (same pattern as useBaseQuery)
+  const [observer, setObserver] = createSignal(
+    new MutationObserver<TData, TError, TVariables, TOnMutateResult>(
+      client(),
+      options(),
+    ),
+  )
 
   const mutate: UseMutateFunction<
     TData,
@@ -37,22 +44,37 @@ export function useMutation<
     TVariables,
     TOnMutateResult
   > = (variables, mutateOptions) => {
-    observer.mutate(variables, mutateOptions).catch(noop)
+    observer().mutate(variables, mutateOptions).catch(noop)
   }
 
   const [state, setState] = createStore<
     UseMutationResult<TData, TError, TVariables, TOnMutateResult>
   >({
-    ...observer.getCurrentResult(),
+    ...observer().getCurrentResult(),
     mutate,
-    mutateAsync: observer.getCurrentResult().mutate,
+    mutateAsync: observer().getCurrentResult().mutate,
   })
+
+  // When client changes → recreate observer (same pattern as useBaseQuery)
+  createEffect(
+    () => client(),
+    (c, prevC) => {
+      if (c !== prevC) {
+        setObserver(
+          new MutationObserver<TData, TError, TVariables, TOnMutateResult>(
+            c,
+            options(),
+          ),
+        )
+      }
+    },
+  )
 
   // Solid v2: createEffect(compute, apply) replaces createComputed
   createEffect(
     () => options(),
     (opts) => {
-      observer.setOptions(opts)
+      observer().setOptions(opts)
     },
   )
 
@@ -62,22 +84,27 @@ export function useMutation<
   createMemo(() => {
     if (
       state.isError &&
-      shouldThrowError(observer.options.throwOnError, [state.error])
+      shouldThrowError(observer().options.throwOnError, [state.error])
     ) {
       throw state.error
     }
   })
 
-  // Solid v2: setState takes updater function
-  const unsubscribe = observer.subscribe((result) => {
-    setState(() => ({
-      ...result,
-      mutate,
-      mutateAsync: result.mutate,
-    }))
-  })
-
-  onCleanup(unsubscribe)
+  // Subscription wrapped in createEffect for Solid v2 RFC 01 compliance
+  // (no top-level side effects).
+  createEffect(
+    () => observer(),
+    (obs) => {
+      const unsubscribe = obs.subscribe((result) => {
+        setState(() => ({
+          ...result,
+          mutate,
+          mutateAsync: result.mutate,
+        }))
+      })
+      onCleanup(unsubscribe)
+    },
+  )
 
   return state
 }
