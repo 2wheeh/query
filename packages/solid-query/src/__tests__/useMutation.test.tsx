@@ -425,7 +425,7 @@ describe('useMutation', () => {
       }))
 
       createRenderEffect(
-        () => deep(mutation as any),
+        () => deep(mutation),
         () => {
           states.push({ ...mutation } as UseMutationResult<any, any, any, any>)
         },
@@ -627,7 +627,7 @@ describe('useMutation', () => {
       }))
 
       createRenderEffect(
-        () => deep(mutation as any),
+        () => deep(mutation),
         () => {
           states.push(`${mutation.status}, ${mutation.isPaused}`)
         },

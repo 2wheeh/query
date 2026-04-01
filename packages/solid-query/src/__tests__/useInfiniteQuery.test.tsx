@@ -76,7 +76,7 @@ describe('useInfiniteQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -350,7 +350,7 @@ describe('useInfiniteQuery', () => {
           return { status: state.status, data: state.data }
         },
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1360,7 +1360,7 @@ describe('useInfiniteQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1648,7 +1648,7 @@ describe('useInfiniteQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1698,7 +1698,7 @@ describe('useInfiniteQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1748,7 +1748,7 @@ describe('useInfiniteQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 

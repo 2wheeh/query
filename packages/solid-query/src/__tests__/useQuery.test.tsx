@@ -263,7 +263,7 @@ describe('useQuery', () => {
           isFetching: state.isFetching,
         }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -383,7 +383,7 @@ describe('useQuery', () => {
           isFetching: state.isFetching,
         }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -513,7 +513,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -677,7 +677,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -729,7 +729,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return (
@@ -795,7 +795,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -831,7 +831,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -864,7 +864,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -898,7 +898,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -932,7 +932,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -968,7 +968,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1051,7 +1051,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1102,7 +1102,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1298,7 +1298,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...result }),
         () => {
-          results.push(snapshot(result) as any)
+          results.push(snapshot(result))
         },
       )
 
@@ -1361,7 +1361,7 @@ describe('useQuery', () => {
           isStale: state.isStale,
         }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1443,7 +1443,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1494,7 +1494,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1542,7 +1542,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1601,7 +1601,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1673,7 +1673,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1758,7 +1758,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -1833,7 +1833,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -2010,7 +2010,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -2046,7 +2046,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -2334,7 +2334,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -2372,7 +2372,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -2410,7 +2410,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -2448,7 +2448,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -2491,7 +2491,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return <div>data: {state.data}</div>
@@ -2555,7 +2555,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -2604,7 +2604,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -3112,7 +3112,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return (
@@ -3169,7 +3169,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -3213,7 +3213,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -3259,7 +3259,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -3308,7 +3308,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -3353,7 +3353,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -3636,7 +3636,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -3685,7 +3685,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return (
@@ -3762,7 +3762,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
       return null
@@ -4120,7 +4120,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...result }),
         () => {
-          results.push(snapshot(result) as any)
+          results.push(snapshot(result))
         },
       )
 
@@ -4159,7 +4159,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...result }),
         () => {
-          results.push(snapshot(result) as any)
+          results.push(snapshot(result))
         },
       )
 
@@ -4199,7 +4199,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...result }),
         () => {
-          results.push(snapshot(result) as any)
+          results.push(snapshot(result))
         },
       )
 
@@ -4457,7 +4457,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -4542,7 +4542,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -4681,7 +4681,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -4736,7 +4736,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ state: { ...state }, count: count() }),
         (s: any) => {
-          states.push({ state: snapshot(state), count: s.count } as any)
+          states.push({ state: snapshot(state), count: s.count })
         },
       )
 
@@ -4807,7 +4807,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -4864,7 +4864,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -5198,7 +5198,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -5252,7 +5252,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -5334,7 +5334,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -5652,7 +5652,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
@@ -6587,7 +6587,7 @@ describe('useQuery', () => {
       createRenderEffect(
         () => ({ ...state }),
         () => {
-          states.push(snapshot(state) as any)
+          states.push(snapshot(state))
         },
       )
 
