@@ -1510,7 +1510,7 @@ importers:
         version: 8.2.11(@sveltejs/kit@2.53.3(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.53.5)(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.46.0)(yaml@2.8.2)))(svelte@5.53.5)(typescript@5.8.3)(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.46.0)(yaml@2.8.2)))(astro@5.17.1(@types/node@22.19.15)(@vercel/functions@2.2.13)(db0@0.3.4)(idb-keyval@6.2.2)(ioredis@5.9.2)(jiti@1.21.7)(lightningcss@1.30.2)(rollup@4.57.1)(sass@1.90.0)(terser@5.46.0)(typescript@5.8.3)(yaml@2.8.2))(encoding@0.1.13)(next@16.1.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(sass@1.90.0))(react@19.2.4)(rollup@4.57.1)(svelte@5.53.5)(vue@3.5.28(typescript@5.8.3))
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: ^6.0.0-alpha.2
         version: link:../../../packages/solid-query
@@ -1534,7 +1534,7 @@ importers:
     dependencies:
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: ^6.0.0-alpha.2
         version: link:../../../packages/solid-query
@@ -1559,7 +1559,7 @@ importers:
     dependencies:
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: ^6.0.0-alpha.2
         version: link:../../../packages/solid-query
@@ -1590,7 +1590,7 @@ importers:
     dependencies:
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: ^6.0.0-alpha.2
         version: link:../../../packages/solid-query
@@ -1615,7 +1615,7 @@ importers:
     dependencies:
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/query-async-storage-persister':
         specifier: ^5.90.27
         version: link:../../../packages/query-async-storage-persister
@@ -1649,7 +1649,7 @@ importers:
     dependencies:
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: ^6.0.0-alpha.2
         version: link:../../../packages/solid-query
@@ -1686,7 +1686,7 @@ importers:
         version: 1.2.1(@testing-library/jest-dom@6.9.1)(solid-js@2.0.0-beta.4)(vinxi@0.5.11(@types/node@22.19.15)(@vercel/functions@2.2.13)(db0@0.3.4)(encoding@0.1.13)(idb-keyval@6.2.2)(ioredis@5.9.2)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.46.0)(yaml@2.8.2))(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.46.0)(yaml@2.8.2))
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: ^6.0.0-alpha.2
         version: link:../../../packages/solid-query
@@ -2286,7 +2286,7 @@ importers:
     dependencies:
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: workspace:*
         version: link:../../packages/solid-query
@@ -2825,7 +2825,7 @@ importers:
         version: 0.8.10(@solidjs/router@0.15.4(solid-js@2.0.0-beta.4))(solid-js@2.0.0-beta.4)
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/query-test-utils':
         specifier: workspace:*
         version: link:../query-test-utils
@@ -2862,7 +2862,7 @@ importers:
         version: 0.8.10(@solidjs/router@0.15.4(solid-js@2.0.0-beta.4))(solid-js@2.0.0-beta.4)
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/solid-query':
         specifier: workspace:*
         version: link:../solid-query
@@ -2899,7 +2899,7 @@ importers:
         version: 0.8.10(@solidjs/router@0.15.4(solid-js@2.0.0-beta.4))(solid-js@2.0.0-beta.4)
       '@solidjs/web':
         specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)
+        version: 2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)
       '@tanstack/query-test-utils':
         specifier: workspace:*
         version: link:../query-test-utils
@@ -6756,8 +6756,8 @@ packages:
     peerDependencies:
       solid-js: ^1.8.6
 
-  '@solidjs/signals@0.13.6':
-    resolution: {integrity: sha512-KdnfY9Xtq8lwmouePO/ixuQCEG2MXrUbx8FnqE/p3LhRFZpPTALypvWe2rExe3x5oTYmxQXiYqLvM2LGqHwKPA==}
+  '@solidjs/signals@0.13.8':
+    resolution: {integrity: sha512-3xTgJ2a+YC6fZjrMyDy72XKfafjRv8MnzafHmQm6JZCwOWFnLAlqvbhMvKZDXVeMz9l2shOTKc6nPgRPcEmwGg==}
 
   '@solidjs/start@1.2.1':
     resolution: {integrity: sha512-O5E7rcCwm2f8GlXKgS2xnU37Ld5vMVXJgo/qR7UI5iR5uFo9V2Ac+SSVNXkM98CeHKHt55h1UjbpxxTANEsHmA==}
@@ -20406,7 +20406,7 @@ snapshots:
     dependencies:
       solid-js: 2.0.0-beta.4
 
-  '@solidjs/signals@0.13.6': {}
+  '@solidjs/signals@0.13.8': {}
 
   '@solidjs/start@1.2.1(@testing-library/jest-dom@6.9.1)(solid-js@2.0.0-beta.4)(vinxi@0.5.11(@types/node@22.19.15)(@vercel/functions@2.2.13)(db0@0.3.4)(encoding@0.1.13)(idb-keyval@6.2.2)(ioredis@5.9.2)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.46.0)(yaml@2.8.2))(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.46.0)(yaml@2.8.2))':
     dependencies:
@@ -20439,9 +20439,9 @@ snapshots:
     optionalDependencies:
       '@solidjs/router': 0.15.4(solid-js@2.0.0-beta.4)
 
-  '@solidjs/web@2.0.0-beta.4(@solidjs/signals@0.13.6)(solid-js@2.0.0-beta.4)':
+  '@solidjs/web@2.0.0-beta.4(@solidjs/signals@0.13.8)(solid-js@2.0.0-beta.4)':
     dependencies:
-      '@solidjs/signals': 0.13.6
+      '@solidjs/signals': 0.13.8
       seroval: 1.5.0
       seroval-plugins: 1.5.0(seroval@1.5.0)
       solid-js: 2.0.0-beta.4
@@ -30102,7 +30102,7 @@ snapshots:
 
   solid-js@2.0.0-beta.4:
     dependencies:
-      '@solidjs/signals': 0.13.6
+      '@solidjs/signals': 0.13.8
       csstype: 3.2.3
       seroval: 1.5.0
       seroval-plugins: 1.5.0(seroval@1.5.0)
